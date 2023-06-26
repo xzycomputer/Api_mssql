@@ -44,7 +44,6 @@ app.get('/Getproduct', async (req, res) => {
 
 
 
-
 app.post('/CreateSO', async (req, res) => {
   try {
     const GetSO = await createCustomerAddress(req.body);
@@ -86,18 +85,28 @@ async function createCustomerAddress(addressData) {
     const orderItems = addressData.OrderItems;
     for (let i = 0; i < orderItems.length; i++) {
       const item = orderItems[i];
+
+      const CustomerMappingQuery = `select m.ProductID as ProductID, p.UnitId as UnitId from tbProductMapping m
+      left join Product p on m.ProductID = Id
+      where m.MPProductID = ${item.Product} and m.CustomerID = '${addressData.Customerid}'`;
+      const CustomerMappingData = await executeQuery(CustomerMappingQuery);
+
+
       const SaleOrderDTQuery = `
         insert into SaleOrderDT(HDId, ProductId, UnitId, Qty, IsActive, IsDelete, CreateBy, CreateDate, UnitPrice, Amount)
-        values ('${GetSOHeaderData[0].Id}', ${item.Product}, ${item.UnitId}, ${item.Quantity}, 1, 0, 'API', '${time}', ${item.UnitPrice}, ${item.LineAmount})`;
-      console.log(i)
+        values ('${GetSOHeaderData[0].Id}', ${CustomerMappingData[0].ProductID}, ${CustomerMappingData[0].UnitId}, ${item.Quantity}, 1, 0, 'API', '${time}', ${item.UnitPrice}, ${item.LineAmount})`;
       await executeQuery(SaleOrderDTQuery);
     }
+
+    
 
 
   } catch (error) {
     throw new Error('Failed to create customer address.');
   }
 }
+
+
 
 
 
