@@ -44,13 +44,16 @@ app.get('/Getproduct', async (req, res) => {
 
 
 
+
+
+
 app.post('/CreateSO', async (req, res) => {
   try {
     const GetSO = await createCustomerAddress(req.body);
     res.status(200).json({ GetSO });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to create customer address.' });
+    res.status( 500).json({ error: 'Failed to create customer address.'});
   }
 });
 
@@ -64,17 +67,21 @@ async function createCustomerAddress(addressData) {
     let year = date_ob.getFullYear();
     let time = `${year}-${month}-${date}`;
 
+    const MappingId = `select CustomerID from tbCustomerMapping where MPShopID = '${req.body.Customerid}'`;
+    const MappingIddata = await executeQuery(MappingId);
+  
+
     const query = `INSERT INTO CustomerAddress (CustomerId, Contact, Tel, Address, AddressType, ShippingType, IsActive, CreateBy, CreateDate, IsDelete)
-    VALUES ('${addressData.Customerid}', '${addressData.Contact}', '${addressData.Tel}', '${addressData.Address}', 'ผู้รับ', 'ลูกค้า', 1, 'API', '${time}', 0)`;
+    VALUES ('${MappingIddata[0].CustomerID}', '${addressData.Contact}', '${addressData.Tel}', '${addressData.Address}', 'ผู้รับ', 'ลูกค้า', 1, 'API', '${time}', 0)`;
 
     await executeQuery(query);
 
-    const addressIdQuery = `SELECT TOP 1 Id FROM CustomerAddress WHERE CustomerId = '${addressData.Customerid}' ORDER BY Id DESC`;
+    const addressIdQuery = `SELECT TOP 1 Id FROM CustomerAddress WHERE CustomerId = '${MappingIddata[0].CustomerID}' ORDER BY Id DESC`;
     const addressIdData = await executeQuery(addressIdQuery);
 
     const SaleOrderHDQuery = `
     insert into SaleOrderHD (Id,BranchId, DocumentNo, DocumentDate, CustomerId, Status, Contact, DueDate, PaymentType, SaleId, IsCancel, AmountPaid, RecipientAddressId, SenderAddressId, IsActive, CreateApp, CreateBy, CreateDate, IsDelete, DocumentType, ReceiveHDId, DealerId)
-    Values ('${uuidv4()}',1, '${addressData.Ordernumber}', '${addressData.Orderdate}', '${addressData.Customerid}', 'รอยืนยัน', '${addressData.Contact}', '${time}', '${addressData.PaymentType}', 3, 0, ${addressData.Amount}, ${addressIdData[0].Id}, 10702, 1, 'API', 'API', '${time}', 0, 'การสั่งเบิกสินค้า', '00000000-0000-0000-0000-000000000000', ${addressData.DeliveryBy})`;
+    Values ('${uuidv4()}',1, '${addressData.Ordernumber}', '${addressData.Orderdate}', '${MappingIddata[0].CustomerID}', 'รอยืนยัน', '${addressData.Contact}', '${time}', '${addressData.PaymentType}', 3, 0, ${addressData.Amount}, ${addressIdData[0].Id}, 10702, 1, 'API', 'API', '${time}', 0, 'การสั่งเบิกสินค้า', '00000000-0000-0000-0000-000000000000', ${addressData.DeliveryBy})`;
 
     await executeQuery(SaleOrderHDQuery);
 
@@ -88,7 +95,7 @@ async function createCustomerAddress(addressData) {
 
       const CustomerMappingQuery = `select m.ProductID as ProductID, p.UnitId as UnitId from tbProductMapping m
       left join Product p on m.ProductID = Id
-      where m.MPProductID = ${item.Product} and m.CustomerID = '${addressData.Customerid}'`;
+      where m.MPProductID = ${item.Product} and m.CustomerID = '${MappingIddata[0].CustomerID}'`;
       const CustomerMappingData = await executeQuery(CustomerMappingQuery);
 
 
